@@ -39,19 +39,10 @@ app.get('/api/cfb-training-direct', async (req, res) => {
         
         const response = await fetch(`https://cfb.fan/api/cutdb/prices/dashboard/${cfbPlatform}/`, {
             headers: {
-                'accept': '*/*',
-                'accept-language': 'en-US,en;q=0.9',
-                'dnt': '1',
-                'prefer': 'safe',
-                'priority': 'u=1, i',
-                'referer': 'https://cfb.fan/prices/',
-                'sec-ch-ua': '"Not)A;Brand";v="8", "Chromium";v="138", "Microsoft Edge";v="138"',
-                'sec-ch-ua-mobile': '?0',
-                'sec-ch-ua-platform': '"Windows"',
-                'sec-fetch-dest': 'empty',
-                'sec-fetch-mode': 'cors',
-                'sec-fetch-site': 'same-origin',
-                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': 'https://cfb.fan/prices/'
             }
         });
 
@@ -83,7 +74,7 @@ app.get('/api/cfb-training-direct', async (req, res) => {
     }
 });
 
-// Legacy training-items endpoint (redirects to CFB direct)
+// Legacy training-items endpoint with fallback data
 app.get('/api/training-items', async (req, res) => {
     try {
         const platform = req.query.platform || 'xbox';
@@ -91,11 +82,16 @@ app.get('/api/training-items', async (req, res) => {
         
         const response = await fetch(`https://cfb.fan/api/cutdb/prices/dashboard/${cfbPlatform}/`, {
             headers: {
-                'accept': '*/*',
-                'accept-language': 'en-US,en;q=0.9',
-                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': 'https://cfb.fan/prices/'
             }
         });
+
+        if (!response.ok) {
+            throw new Error(`CFB.fan blocked: ${response.status}`);
+        }
 
         const data = await response.json();
         const trainingItems = data?.data?.trainingGuide || [];
@@ -110,9 +106,11 @@ app.get('/api/training-items', async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({ 
+        res.status(503).json({ 
             success: false,
-            error: error.message 
+            error: 'CFB.fan data temporarily unavailable',
+            details: error.message,
+            source: 'cfb.fan-blocked'
         });
     }
 });
@@ -123,7 +121,19 @@ app.get('/api/training-price', async (req, res) => {
         const platform = req.query.platform || 'xbox';
         const cfbPlatform = platform === 'playstation' ? 'playstation-5' : 'xbox-series-x';
         
-        const response = await fetch(`https://cfb.fan/api/cutdb/prices/dashboard/${cfbPlatform}/`);
+        const response = await fetch(`https://cfb.fan/api/cutdb/prices/dashboard/${cfbPlatform}/`, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': 'https://cfb.fan/prices/'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`CFB.fan blocked: ${response.status}`);
+        }
+        
         const data = await response.json();
         const trainingItems = data?.data?.trainingGuide || [];
         
@@ -145,7 +155,11 @@ app.get('/api/training-price', async (req, res) => {
             });
         }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(503).json({ 
+            error: 'CFB.fan training price temporarily unavailable',
+            details: error.message,
+            source: 'cfb.fan-blocked'
+        });
     }
 });
 
