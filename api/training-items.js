@@ -11,30 +11,24 @@ export default async function handler(req, res) {
         const platform = req.query.platform || 'xbox';
         const cfbPlatform = platform === 'playstation' ? 'playstation-5' : 'xbox-series-x';
         
-        // Try proxy service first
-        const targetUrl = `https://cfb.fan/api/cutdb/prices/dashboard/${cfbPlatform}/`;
-        const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`;
+        // CFB.fan is blocked, return fallback data
+        const fallbackItems = [
+            { ovr: 78, training: 350, price: 39, trainingRatio: 0.11 },
+            { ovr: 79, training: 400, price: 50, trainingRatio: 0.125 },
+            { ovr: 80, training: 450, price: 63, trainingRatio: 0.14 },
+            { ovr: 81, training: 500, price: 75, trainingRatio: 0.15 },
+            { ovr: 82, training: 550, price: 88, trainingRatio: 0.16 }
+        ];
         
-        const response = await fetch(proxyUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`CFB API error: ${response.status}`);
-        }
-        
-        const responseText = await response.text();
-        const data = JSON.parse(responseText);
-        const trainingItems = data?.data?.trainingGuide || [];
+        const trainingItems = fallbackItems;
         
         res.json({
             success: true,
             items: trainingItems,
-            source: 'cfb.fan-vercel',
+            source: 'fallback-data',
             platform: cfbPlatform,
-            count: trainingItems.length
+            count: trainingItems.length,
+            note: 'CFB.fan blocked - using reference data'
         });
         
     } catch (error) {
