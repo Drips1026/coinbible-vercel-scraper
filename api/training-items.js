@@ -11,11 +11,13 @@ export default async function handler(req, res) {
         const platform = req.query.platform || 'xbox';
         const cfbPlatform = platform === 'playstation' ? 'playstation-5' : 'xbox-series-x';
         
-        const response = await fetch(`https://cfb.fan/api/cutdb/prices/dashboard/${cfbPlatform}/`, {
+        // Try proxy service first
+        const targetUrl = `https://cfb.fan/api/cutdb/prices/dashboard/${cfbPlatform}/`;
+        const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`;
+        
+        const response = await fetch(proxyUrl, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'application/json',
-                'Referer': 'https://cfb.fan/'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
         });
         
@@ -23,7 +25,14 @@ export default async function handler(req, res) {
             throw new Error(`CFB API error: ${response.status}`);
         }
         
-        const data = await response.json();
+        let data;
+        try {
+            const responseText = await response.text();
+            data = JSON.parse(responseText);
+        } catch {
+            // If proxy returns HTML or other format, try parsing as JSON
+            data = await response.json();
+        }
         const trainingItems = data?.data?.trainingGuide || [];
         
         res.json({
