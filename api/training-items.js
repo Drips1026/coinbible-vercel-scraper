@@ -11,24 +11,58 @@ export default async function handler(req, res) {
         const platform = req.query.platform || 'xbox';
         const cfbPlatform = platform === 'playstation' ? 'playstation-5' : 'xbox-series-x';
         
-        // CFB.fan is blocked, return fallback data
-        const fallbackItems = [
-            { ovr: 78, training: 350, price: 39, trainingRatio: 0.11 },
-            { ovr: 79, training: 400, price: 50, trainingRatio: 0.125 },
-            { ovr: 80, training: 450, price: 63, trainingRatio: 0.14 },
-            { ovr: 81, training: 500, price: 75, trainingRatio: 0.15 },
-            { ovr: 82, training: 550, price: 88, trainingRatio: 0.16 }
+        const targetUrl = `https://cfb.fan/api/cutdb/prices/dashboard/${cfbPlatform}/`;
+        const proxies = [
+            `https://cors-anywhere.herokuapp.com/${targetUrl}`,
+            `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
+            `https://thingproxy.freeboard.io/fetch/${targetUrl}`
         ];
         
-        const trainingItems = fallbackItems;
+        let trainingItems = [];
+        let lastError = null;
+        
+        for (const proxyUrl of proxies) {
+            try {
+                const response = await fetch(proxyUrl, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                });
+                
+                if (response.ok) {
+                    let data;
+                    const responseText = await response.text();
+                    
+                    // Handle different proxy response formats
+                    if (proxyUrl.includes('allorigins')) {
+                        const proxyData = JSON.parse(responseText);
+                        data = JSON.parse(proxyData.contents);
+                    } else {
+                        data = JSON.parse(responseText);
+                    }
+                    
+                    trainingItems = data?.data?.trainingGuide || [];
+                    if (trainingItems.length > 0) {
+                        break; // Success, exit loop
+                    }
+                }
+            } catch (error) {
+                lastError = error;
+                continue; // Try next proxy
+            }
+        }
+        
+        if (trainingItems.length === 0) {
+            throw new Error(`All proxies failed. Last error: ${lastError?.message || 'Unknown'}`);
+        }
         
         res.json({
             success: true,
             items: trainingItems,
-            source: 'fallback-data',
+            source: 'cfb.fan-proxy',
             platform: cfbPlatform,
-            count: trainingItems.length,
-            note: 'CFB.fan blocked - using reference data'
+            count: trainingItems.length
         });
         
     } catch (error) {
