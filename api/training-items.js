@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-    // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -12,7 +11,6 @@ export default async function handler(req, res) {
         const platform = req.query.platform || 'xbox';
         const cfbPlatform = platform === 'playstation' ? 'playstation-5' : 'xbox-series-x';
         
-        // Use fetch with different approach
         const response = await fetch(`https://cfb.fan/api/cutdb/prices/dashboard/${cfbPlatform}/`, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
