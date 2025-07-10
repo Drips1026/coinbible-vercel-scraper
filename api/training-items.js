@@ -25,14 +25,8 @@ export default async function handler(req, res) {
             throw new Error(`CFB API error: ${response.status}`);
         }
         
-        let data;
-        try {
-            const responseText = await response.text();
-            data = JSON.parse(responseText);
-        } catch {
-            // If proxy returns HTML or other format, try parsing as JSON
-            data = await response.json();
-        }
+        const responseText = await response.text();
+        const data = JSON.parse(responseText);
         const trainingItems = data?.data?.trainingGuide || [];
         
         res.json({
