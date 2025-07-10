@@ -23,7 +23,7 @@ app.use(cors({
         "http://127.0.0.1:3001"
     ],
     methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept", "Accept-Language", "Cache-Control", "Pragma", "User-Agent"],
     credentials: true
 }));
 
